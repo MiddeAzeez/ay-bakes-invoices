@@ -50,9 +50,9 @@
     #printableInvoice.pdf-export {
       display: block !important;
       position: static !important;
-      width: 680px !important; /* Slightly narrower than A4 printable width for reliable Android canvas capture */
+      width: 794px !important; /* A4 portrait width at 96 CSS px per inch */
       min-width: 0 !important;
-      max-width: 680px !important;
+      max-width: 794px !important;
       height: auto !important;
       min-height: 0 !important;
       max-height: none !important;
@@ -71,7 +71,12 @@
     #printableInvoice.pdf-export,
     #printableInvoice.pdf-export * { box-sizing: border-box !important; }
     #printableInvoice.pdf-export .invoice-brand { color: #5C3A1D !important; }
-    #printableInvoice.pdf-export .invoice-section { max-width: 100% !important; }
+    #printableInvoice.pdf-export .invoice-section { max-width: 100% !important; width: 100% !important; }
+    #printableInvoice.pdf-export .flex { min-width: 0 !important; }
+    #printableInvoice.pdf-export .justify-between { justify-content: space-between !important; }
+    #printableInvoice.pdf-export img,
+    #printableInvoice.pdf-export table { max-width: 100% !important; }
+
     #printableInvoice.pdf-export table { max-width: 100% !important; }
     #printableInvoice.pdf-export th,
     #printableInvoice.pdf-export td { min-width: 0 !important; }
@@ -529,9 +534,9 @@
         position: 'fixed',
         left: '0',
         top: '0',
-        width: '680px',
+        width: '794px',
         minWidth: '0',
-        maxWidth: '680px',
+        maxWidth: '794px',
         height: 'auto',
         maxHeight: 'none',
         overflow: 'visible',
@@ -553,8 +558,8 @@
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          width: 680,
-          windowWidth: 800,
+          width: 794,
+          windowWidth: 794,
           scrollX: 0,
           scrollY: 0
         },
