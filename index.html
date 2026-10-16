@@ -201,33 +201,33 @@
         </div>
 
         <!-- Table of Items -->
-        <table class="w-full text-left border-collapse">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
           <thead>
-            <tr class="border-b-2 border-slate-200 text-[11px] uppercase font-bold text-slate-500">
-              <th class="py-2.5">Item Description</th>
-              <th class="py-2.5 text-center w-12">Qty</th>
-              <th class="py-2.5 text-right w-20">Price</th>
-              <th class="py-2.5 text-right w-20">Total</th>
+            <tr style="border-bottom: 2px solid #e2e8f0; font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b;">
+              <th style="padding: 10px 0;">Item Description</th>
+              <th style="padding: 10px 0; text-align: center; width: 50px;">Qty</th>
+              <th style="padding: 10px 0; text-align: right; width: 70px;">Price</th>
+              <th style="padding: 10px 0; text-align: right; width: 70px;">Total</th>
             </tr>
           </thead>
-          <tbody id="invModalTable" class="divide-y divide-slate-100 text-xs font-medium">
+          <tbody id="invModalTable" style="font-size: 12px; font-weight: 500;">
             <!-- Dynamic rows -->
           </tbody>
         </table>
 
         <!-- Total Calculation Box -->
-        <div class="border-t-2 border-slate-900 pt-4 flex justify-between items-center">
+        <div style="border-top: 2px solid #0f172a; padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <span class="text-xs font-extrabold text-slate-700 uppercase block">Grand Total</span>
-            <span class="text-[10px] text-slate-400 font-medium">All prices in MVR (/-)</span>
+            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; display: block;">Grand Total</span>
+            <span style="font-size: 10px; color: #94a3b8;">All prices in MVR (/-)</span>
           </div>
-          <span class="text-2xl font-black text-bakery-900" id="invModalGrandTotal">0/-</span>
+          <span style="font-size: 24px; font-weight: 900; color: #3d2410;" id="invModalGrandTotal">0/-</span>
         </div>
 
         <!-- Footer Note -->
-        <div class="text-center pt-6 border-t border-dashed border-slate-200 space-y-1">
-          <p class="text-xs font-bold text-slate-800">Thank you for your business!</p>
-          <p class="text-[10px] text-slate-400">AY Bakes • Official Invoice Statement</p>
+        <div style="text-center; padding-top: 20px; border-top: 1px dashed #cbd5e1;">
+          <p style="font-size: 12px; font-weight: bold; color: #1e293b;">Thank you for your business!</p>
+          <p style="font-size: 10px; color: #94a3b8;">AY Bakes • Official Invoice Statement</p>
         </div>
 
       </div>
@@ -267,17 +267,14 @@
     window.onload = () => {
       document.getElementById('invoiceDate').valueAsDate = new Date();
       
-      // Check for New Year Reset Logic
       const savedYear = localStorage.getItem('ay_bakes_year');
       const savedSeq = localStorage.getItem('ay_bakes_seq');
 
       if (savedYear && parseInt(savedYear, 10) === currentYear) {
-        // Same year, load existing sequence count
         if (savedSeq) {
           currentSeqNum = parseInt(savedSeq, 10);
         }
       } else {
-        // New year detected! Reset sequence back to 1 and save new year
         currentSeqNum = 1;
         localStorage.setItem('ay_bakes_year', currentYear);
         localStorage.setItem('ay_bakes_seq', currentSeqNum);
@@ -443,11 +440,12 @@
           total += itemTotal;
           
           const row = document.createElement('tr');
+          row.style.borderBottom = "1px solid #f1f5f9";
           row.innerHTML = `
-            <td class="py-2.5 font-bold text-slate-800">${item.name}</td>
-            <td class="py-2.5 text-center text-slate-600">${qty}</td>
-            <td class="py-2.5 text-right text-slate-500">${item.price}/-</td>
-            <td class="py-2.5 text-right font-extrabold text-slate-900">${itemTotal}/-</td>
+            <td style="padding: 10px 0; font-weight: bold; color: #1e293b;">${item.name}</td>
+            <td style="padding: 10px 0; text-align: center; color: #475569;">${qty}</td>
+            <td style="padding: 10px 0; text-align: right; color: #64748b;">${item.price}/-</td>
+            <td style="padding: 10px 0; text-align: right; font-weight: 800; color: #0f172a;">${itemTotal}/-</td>
           `;
           tableBody.appendChild(row);
         }
@@ -469,27 +467,30 @@
         margin:       10,
         filename:     `Invoice_${invNum}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
-      try {
-        const pdfWorker = html2pdf().from(element).set(opt);
-        const pdfBlob = await pdfWorker.output('blob');
-        const pdfFile = new File([pdfBlob], `Invoice_${invNum}.pdf`, { type: 'application/pdf' });
+      // Slight timeout delay to guarantee full render layout paint before capture
+      setTimeout(async () => {
+        try {
+          const pdfWorker = html2pdf().from(element).set(opt);
+          const pdfBlob = await pdfWorker.output('blob');
+          const pdfFile = new File([pdfBlob], `Invoice_${invNum}.pdf`, { type: 'application/pdf' });
 
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          await navigator.share({
-            files: [pdfFile],
-            title: `Invoice ${invNum}`,
-            text: `Please find attached invoice ${invNum} from AY Bakes.`,
-          });
-        } else {
-          pdfWorker.save();
+          if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+            await navigator.share({
+              files: [pdfFile],
+              title: `Invoice ${invNum}`,
+              text: `Please find attached invoice ${invNum} from AY Bakes.`,
+            });
+          } else {
+            pdfWorker.save();
+          }
+        } catch (error) {
+          html2pdf().from(element).set(opt).save();
         }
-      } catch (error) {
-        html2pdf().from(element).set(opt).save();
-      }
+      }, 300);
     }
 
     function finalizeAndIncrement() {
