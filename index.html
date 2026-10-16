@@ -517,7 +517,8 @@
     function closeInvoiceModal() {
       document.getElementById('invoiceModal').classList.add('hidden');
     }
-async function downloadOrSharePDF() {
+
+    async function downloadOrSharePDF() {
       const source = document.getElementById('printableInvoice');
       const invNum = document.getElementById('invoiceNumInput').value || 'Invoice';
       const filename = `Invoice_${invNum}.pdf`;
@@ -548,67 +549,6 @@ async function downloadOrSharePDF() {
       });
       document.body.appendChild(exportElement);
 
-      const opt = {
-        margin: [8, 8, 8, 8],
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0,
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.invoice-section'] }
-      };
-
-      try {
-        // Let the browser lay out the standalone invoice before taking the snapshot.
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        const pdfWorker = html2pdf().from(exportElement).set(opt);
-        const pdfBlob = await pdfWorker.output('blob');
-        const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
-
-        // Always download the generated PDF. Do not open the OS share sheet.
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-
-        // ---> ADDED PART: Automatically bump sequence and reset form <---
-        currentSeqNum++;
-        localStorage.setItem('ay_bakes_seq', currentSeqNum);
-        updateInvoiceNumDisplay();
-        resetQuantities();
-        closeInvoiceModal();
-
-      } catch (error) {
-        console.error('PDF export failed:', error);
-        try {
-          await html2pdf().set(opt).from(exportElement).save();
-
-          // ---> ADDED PART (Fallback case) <---
-          currentSeqNum++;
-          localStorage.setItem('ay_bakes_seq', currentSeqNum);
-          updateInvoiceNumDisplay();
-          resetQuantities();
-          closeInvoiceModal();
-
-        } catch (fallbackError) {
-          console.error('PDF fallback failed:', fallbackError);
-          alert('Unable to create the PDF. Please try again or use your browser’s Share/Print option.');
-        }
-      } finally {
-        exportElement.remove();
-      }
-    }
       const opt = {
         margin: [8, 8, 8, 8],
         filename,
