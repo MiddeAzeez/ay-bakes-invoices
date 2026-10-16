@@ -459,4 +459,210 @@
 
       menuData.forEach(item => {
         const qty = quantities[item.id] || 0;
-        grandTotal +=
+        grandTotal += qty * item.price;
+        totalItemCount += qty;
+      });
+
+      document.getElementById('stickyTotal').innerText = `${grandTotal}/-`;
+      document.getElementById('stickyItemCount').innerText = `(${totalItemCount} items)`;
+
+      const btnGen = document.getElementById('btnGenerate');
+      if (totalItemCount > 0) {
+        btnGen.disabled = false;
+        btnGen.className = "flex-1 max-w-[200px] py-3.5 bg-bakery-600 hover:bg-bakery-800 text-white font-bold text-sm rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95";
+      } else {
+        btnGen.disabled = true;
+        btnGen.className = "flex-1 max-w-[200px] py-3.5 bg-slate-200 text-slate-400 font-bold text-sm rounded-xl shadow-none flex items-center justify-center gap-2 cursor-not-allowed";
+      }
+    }
+
+    function openInvoiceModal() {
+      const customerName = getSelectedCustomerName();
+      const invNum = document.getElementById('invoiceNumInput').value;
+      const invDateVal = document.getElementById('invoiceDate').value;
+      
+      const formattedDate = invDateVal ? new Date(invDateVal).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today';
+
+      document.getElementById('invModalCustomer').innerText = customerName;
+      document.getElementById('invModalNum').innerText = invNum;
+      document.getElementById('invModalDate').innerText = formattedDate;
+
+      const tableBody = document.getElementById('invModalTable');
+      tableBody.innerHTML = "";
+      let total = 0;
+
+      menuData.forEach(item => {
+        const qty = quantities[item.id] || 0;
+        if (qty > 0) {
+          const itemTotal = qty * item.price;
+          total += itemTotal;
+          
+          const row = document.createElement('tr');
+          row.style.borderBottom = "1px solid #f1f5f9";
+          row.innerHTML = `
+            <td style="padding: 12px 8px 12px 0; font-weight: 700; color: #1e293b; border-bottom: 1px solid #f1f5f9;">${item.name}</td>
+            <td style="padding: 12px 5px; text-align: center; color: #475569; border-bottom: 1px solid #f1f5f9;">${qty}</td>
+            <td style="padding: 12px 5px; text-align: right; color: #64748b; white-space:nowrap; border-bottom: 1px solid #f1f5f9;">${item.price.toFixed(2)}</td>
+            <td style="padding: 12px 0 12px 5px; text-align: right; font-weight: 800; color: #0f172a; white-space:nowrap; border-bottom: 1px solid #f1f5f9;">${itemTotal.toFixed(2)}</td>
+          `;
+          tableBody.appendChild(row);
+        }
+      });
+
+      document.getElementById('invModalSubtotal').innerText = `MVR ${total.toFixed(2)}`;
+      document.getElementById('invModalGrandTotal').innerText = `MVR ${total.toFixed(2)}`;
+      document.getElementById('invoiceModal').classList.remove('hidden');
+    }
+
+    function closeInvoiceModal() {
+      document.getElementById('invoiceModal').classList.add('hidden');
+    }
+async function downloadOrSharePDF() {
+      const source = document.getElementById('printableInvoice');
+      const invNum = document.getElementById('invoiceNumInput').value || 'Invoice';
+      const filename = `Invoice_${invNum}.pdf`;
+
+      // Export a standalone clone outside the modal. Capturing the original
+      // scrollable modal element causes right-side clipping on some Android devices.
+      const exportElement = source.cloneNode(true);
+      exportElement.id = 'printableInvoice';
+      exportElement.classList.remove('p-6', 'overflow-y-auto', 'text-sm');
+      exportElement.classList.add('pdf-export');
+      Object.assign(exportElement.style, {
+        display: 'block',
+        position: 'absolute',
+        left: '0',
+        top: '0',
+        width: '794px',
+        minWidth: '794px',
+        maxWidth: '794px',
+        height: 'auto',
+        maxHeight: 'none',
+        overflow: 'visible',
+        padding: '0',
+        margin: '0',
+        boxSizing: 'border-box',
+        background: '#ffffff',
+        zIndex: '2147483647',
+        transform: 'none'
+      });
+      document.body.appendChild(exportElement);
+
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0,
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.invoice-section'] }
+      };
+
+      try {
+        // Let the browser lay out the standalone invoice before taking the snapshot.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const pdfWorker = html2pdf().from(exportElement).set(opt);
+        const pdfBlob = await pdfWorker.output('blob');
+        const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        // Always download the generated PDF. Do not open the OS share sheet.
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+        // ---> ADDED PART: Automatically bump sequence and reset form <---
+        currentSeqNum++;
+        localStorage.setItem('ay_bakes_seq', currentSeqNum);
+        updateInvoiceNumDisplay();
+        resetQuantities();
+        closeInvoiceModal();
+
+      } catch (error) {
+        console.error('PDF export failed:', error);
+        try {
+          await html2pdf().set(opt).from(exportElement).save();
+
+          // ---> ADDED PART (Fallback case) <---
+          currentSeqNum++;
+          localStorage.setItem('ay_bakes_seq', currentSeqNum);
+          updateInvoiceNumDisplay();
+          resetQuantities();
+          closeInvoiceModal();
+
+        } catch (fallbackError) {
+          console.error('PDF fallback failed:', fallbackError);
+          alert('Unable to create the PDF. Please try again or use your browser’s Share/Print option.');
+        }
+      } finally {
+        exportElement.remove();
+      }
+    }
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0,
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.invoice-section'] }
+      };
+
+      try {
+        // Let the browser lay out the standalone invoice before taking the snapshot.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const pdfWorker = html2pdf().from(exportElement).set(opt);
+        const pdfBlob = await pdfWorker.output('blob');
+        const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        // Always download the generated PDF. Do not open the OS share sheet.
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } catch (error) {
+        console.error('PDF export failed:', error);
+        try {
+          await html2pdf().set(opt).from(exportElement).save();
+        } catch (fallbackError) {
+          console.error('PDF fallback failed:', fallbackError);
+          alert('Unable to create the PDF. Please try again or use your browser’s Share/Print option.');
+        }
+      } finally {
+        exportElement.remove();
+      }
+    }
+
+    function finalizeAndIncrement() {
+      currentSeqNum++;
+      localStorage.setItem('ay_bakes_seq', currentSeqNum);
+      updateInvoiceNumDisplay();
+      resetQuantities();
+      closeInvoiceModal();
+      alert("Invoice completed! Sequence updated to next number.");
+    }
+  </script>
+</body>
+</html>
