@@ -50,9 +50,9 @@
     #printableInvoice.pdf-export {
       display: block !important;
       position: static !important;
-      width: 718px !important; /* A4 portrait content width after 10 mm margins */
+      width: 794px !important; /* CSS pixel width for a full A4 portrait page at 96 dpi */
       min-width: 0 !important;
-      max-width: 718px !important;
+      max-width: 794px !important;
       height: auto !important;
       min-height: 0 !important;
       max-height: none !important;
@@ -534,9 +534,9 @@
         position: 'absolute',
         left: '0',
         top: '0',
-        width: '718px',
-        minWidth: '0',
-        maxWidth: '718px',
+        width: '794px',
+        minWidth: '794px',
+        maxWidth: '794px',
         height: 'auto',
         maxHeight: 'none',
         overflow: 'visible',
@@ -550,7 +550,7 @@
       document.body.appendChild(exportElement);
 
       const opt = {
-        margin: [10, 10, 10, 10],
+        margin: [8, 8, 8, 8],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
@@ -558,10 +558,8 @@
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          width: 718,
-          windowWidth: 718,
           scrollX: 0,
-          scrollY: 0
+          scrollY: 0,
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.invoice-section'] }
