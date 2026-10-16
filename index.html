@@ -582,10 +582,23 @@
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+        // Automatically advance sequence number and reset form upon successful download
+        currentSeqNum++;
+        localStorage.setItem('ay_bakes_seq', currentSeqNum);
+        updateInvoiceNumDisplay();
+        resetQuantities();
+        closeInvoiceModal();
       } catch (error) {
         console.error('PDF export failed:', error);
         try {
           await html2pdf().set(opt).from(exportElement).save();
+
+          currentSeqNum++;
+          localStorage.setItem('ay_bakes_seq', currentSeqNum);
+          updateInvoiceNumDisplay();
+          resetQuantities();
+          closeInvoiceModal();
         } catch (fallbackError) {
           console.error('PDF fallback failed:', fallbackError);
           alert('Unable to create the PDF. Please try again or use your browser’s Share/Print option.');
