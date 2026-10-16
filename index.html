@@ -291,13 +291,11 @@
       </div>
 
       <!-- Action Buttons Footer -->
-      <div class="p-4 bg-slate-50 border-t border-slate-200 grid grid-cols-2 gap-2">
-        <button onclick="downloadOrSharePDF()" class="py-3 bg-bakery-600 hover:bg-bakery-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md">
-          <i class="fa-solid fa-file-pdf text-sm"></i> Download / Share PDF
+      <div class="p-4 bg-slate-50 border-t border-slate-200">
+        <button onclick="downloadOrSharePDF()" id="btnDownloadInvoice" class="w-full py-3 bg-bakery-600 hover:bg-bakery-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md">
+          <i class="fa-solid fa-file-pdf text-sm"></i> Download / Print PDF &amp; Complete Invoice
         </button>
-        <button onclick="finalizeAndIncrement()" class="py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md">
-          <i class="fa-solid fa-circle-check text-sm"></i> Complete & Next No.
-        </button>
+        <p class="text-[10px] text-slate-500 text-center mt-2">Downloading the invoice automatically completes it and prepares the next invoice number.</p>
       </div>
 
     </div>
@@ -518,7 +516,16 @@
       document.getElementById('invoiceModal').classList.add('hidden');
     }
 
+    let invoiceExportInProgress = false;
+
     async function downloadOrSharePDF() {
+      if (invoiceExportInProgress) return;
+      invoiceExportInProgress = true;
+      const actionButton = document.getElementById('btnDownloadInvoice');
+      if (actionButton) {
+        actionButton.disabled = true;
+        actionButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-sm"></i> Generating PDF…';
+      }
       const source = document.getElementById('printableInvoice');
       const invNum = document.getElementById('invoiceNumInput').value || 'Invoice';
       const filename = `Invoice_${invNum}.pdf`;
@@ -582,16 +589,27 @@
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+        // A successful PDF generation is the completion action: advance the
+        // sequence and clear the order so the user does not need a second tap.
+        finalizeAndIncrement();
       } catch (error) {
         console.error('PDF export failed:', error);
         try {
           await html2pdf().set(opt).from(exportElement).save();
+          finalizeAndIncrement();
         } catch (fallbackError) {
           console.error('PDF fallback failed:', fallbackError);
-          alert('Unable to create the PDF. Please try again or use your browser’s Share/Print option.');
+          alert('Unable to create the PDF. The invoice was not completed, and the invoice number has not changed. Please try again.');
         }
       } finally {
         exportElement.remove();
+        invoiceExportInProgress = false;
+        const button = document.getElementById('btnDownloadInvoice');
+        if (button) {
+          button.disabled = false;
+          button.innerHTML = '<i class="fa-solid fa-file-pdf text-sm"></i> Download / Print PDF &amp; Complete Invoice';
+        }
       }
     }
 
@@ -601,7 +619,7 @@
       updateInvoiceNumDisplay();
       resetQuantities();
       closeInvoiceModal();
-      alert("Invoice completed! Sequence updated to next number.");
+      // Completion is triggered by successful PDF generation; no second action is needed.
     }
   </script>
 </body>
