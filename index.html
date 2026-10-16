@@ -50,9 +50,9 @@
     #printableInvoice.pdf-export {
       display: block !important;
       position: static !important;
-      width: 794px !important; /* A4 portrait width at 96 CSS px per inch */
+      width: 718px !important; /* A4 portrait content width after 10 mm margins */
       min-width: 0 !important;
-      max-width: 794px !important;
+      max-width: 718px !important;
       height: auto !important;
       min-height: 0 !important;
       max-height: none !important;
@@ -531,12 +531,12 @@
       exportElement.classList.add('pdf-export');
       Object.assign(exportElement.style, {
         display: 'block',
-        position: 'fixed',
+        position: 'absolute',
         left: '0',
         top: '0',
-        width: '794px',
+        width: '718px',
         minWidth: '0',
-        maxWidth: '794px',
+        maxWidth: '718px',
         height: 'auto',
         maxHeight: 'none',
         overflow: 'visible',
@@ -558,8 +558,8 @@
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          width: 794,
-          windowWidth: 794,
+          width: 718,
+          windowWidth: 718,
           scrollX: 0,
           scrollY: 0
         },
