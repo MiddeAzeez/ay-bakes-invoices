@@ -45,19 +45,18 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; }
-    /* PDF-only styles. The invoice is cloned to the document body before export
-       so Android does not capture it inside the narrow, scrollable preview modal. */
+    /* PDF-only styles: scaled to 710px so nothing on the right side gets clipped */
     #printableInvoice.pdf-export {
       display: block !important;
       position: static !important;
-      width: 794px !important; /* CSS pixel width for a full A4 portrait page at 96 dpi */
+      width: 710px !important; 
       min-width: 0 !important;
-      max-width: 794px !important;
+      max-width: 710px !important;
       height: auto !important;
       min-height: 0 !important;
       max-height: none !important;
-      padding: 0 !important;
-      margin: 0 !important;
+      padding: 10px !important;
+      margin: 0 auto !important;
       overflow: visible !important;
       border: 0 !important;
       border-radius: 0 !important;
@@ -77,16 +76,12 @@
     #printableInvoice.pdf-export img,
     #printableInvoice.pdf-export table { max-width: 100% !important; }
 
-    #printableInvoice.pdf-export table { max-width: 100% !important; }
+    #printableInvoice.pdf-export table { max-width: 100% !important; width: 100% !important; table-layout: fixed; border-collapse: collapse; }
     #printableInvoice.pdf-export th,
-    #printableInvoice.pdf-export td { min-width: 0 !important; }
-    #printableInvoice.pdf-export .invoice-row { break-inside: avoid; }
-    #printableInvoice.pdf-export table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
+    #printableInvoice.pdf-export td { min-width: 0 !important; overflow-wrap: anywhere; }
     #printableInvoice.pdf-export thead { display: table-header-group; }
     #printableInvoice.pdf-export tr { break-inside: avoid; }
     #printableInvoice.pdf-export .invoice-section { break-inside: avoid; }
-    #printableInvoice.pdf-export th,
-    #printableInvoice.pdf-export td { overflow-wrap: anywhere; }
   </style>
 </head>
 <body class="bg-bakery-50 text-slate-800 font-sans min-h-screen pb-32">
@@ -523,8 +518,7 @@
       const invNum = document.getElementById('invoiceNumInput').value || 'Invoice';
       const filename = `Invoice_${invNum}.pdf`;
 
-      // Export a standalone clone outside the modal. Capturing the original
-      // scrollable modal element causes right-side clipping on some Android devices.
+      // Export a standalone clone outside the modal with a safe 710px width to prevent right clipping
       const exportElement = source.cloneNode(true);
       exportElement.id = 'printableInvoice';
       exportElement.classList.remove('p-6', 'overflow-y-auto', 'text-sm');
@@ -534,13 +528,13 @@
         position: 'absolute',
         left: '0',
         top: '0',
-        width: '794px',
-        minWidth: '794px',
-        maxWidth: '794px',
+        width: '710px',
+        minWidth: '710px',
+        maxWidth: '710px',
         height: 'auto',
         maxHeight: 'none',
         overflow: 'visible',
-        padding: '0',
+        padding: '10px',
         margin: '0',
         boxSizing: 'border-box',
         background: '#ffffff',
@@ -566,13 +560,11 @@
       };
 
       try {
-        // Let the browser lay out the standalone invoice before taking the snapshot.
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const pdfWorker = html2pdf().from(exportElement).set(opt);
         const pdfBlob = await pdfWorker.output('blob');
         const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-        // Always download the generated PDF. Do not open the OS share sheet.
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
