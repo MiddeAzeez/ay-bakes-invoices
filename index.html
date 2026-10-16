@@ -45,11 +45,17 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; }
-    /* Clean A4 export styling; activated only while generating the PDF. */
+    /* PDF-only styles. The invoice is cloned to the document body before export
+       so Android does not capture it inside the narrow, scrollable preview modal. */
     #printableInvoice.pdf-export {
-      width: 180mm !important;
-      max-width: none !important;
+      display: block !important;
+      position: static !important;
+      width: 718px !important; /* 190mm at 96 CSS px/in */
+      min-width: 718px !important;
+      max-width: 718px !important;
+      height: auto !important;
       min-height: 0 !important;
+      max-height: none !important;
       padding: 0 !important;
       margin: 0 !important;
       overflow: visible !important;
@@ -60,13 +66,16 @@
       color: #1e293b !important;
       font-family: Arial, Helvetica, sans-serif !important;
       font-size: 10pt !important;
+      transform: none !important;
     }
     #printableInvoice.pdf-export .invoice-brand { color: #5C3A1D !important; }
     #printableInvoice.pdf-export .invoice-row { break-inside: avoid; }
-    #printableInvoice.pdf-export table { width: 100%; border-collapse: collapse; }
+    #printableInvoice.pdf-export table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
     #printableInvoice.pdf-export thead { display: table-header-group; }
     #printableInvoice.pdf-export tr { break-inside: avoid; }
     #printableInvoice.pdf-export .invoice-section { break-inside: avoid; }
+    #printableInvoice.pdf-export th,
+    #printableInvoice.pdf-export td { overflow-wrap: anywhere; }
   </style>
 </head>
 <body class="bg-bakery-50 text-slate-800 font-sans min-h-screen pb-32">
@@ -499,41 +508,88 @@
     }
 
     async function downloadOrSharePDF() {
-      const element = document.getElementById('printableInvoice');
-      const invNum = document.getElementById('invoiceNumInput').value;
+      const source = document.getElementById('printableInvoice');
+      const invNum = document.getElementById('invoiceNumInput').value || 'Invoice';
+      const filename = `Invoice_${invNum}.pdf`;
+
+      // Export a standalone clone outside the modal. Capturing the original
+      // scrollable modal element causes right-side clipping on some Android devices.
+      const exportElement = source.cloneNode(true);
+      exportElement.id = 'printableInvoice';
+      exportElement.classList.remove('p-6', 'overflow-y-auto', 'text-sm');
+      exportElement.classList.add('pdf-export');
+      Object.assign(exportElement.style, {
+        display: 'block',
+        position: 'fixed',
+        left: '0',
+        top: '0',
+        width: '718px',
+        minWidth: '718px',
+        maxWidth: '718px',
+        height: 'auto',
+        maxHeight: 'none',
+        overflow: 'visible',
+        padding: '0',
+        margin: '0',
+        boxSizing: 'border-box',
+        background: '#ffffff',
+        zIndex: '2147483647',
+        transform: 'none'
+      });
+      document.body.appendChild(exportElement);
 
       const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `Invoice_${invNum}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', windowWidth: 900 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'] }
+        margin: [10, 10, 10, 10],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: 718,
+          windowWidth: 794,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.invoice-section'] }
       };
 
-      // Temporarily use a print-specific A4-width layout, then restore the mobile preview.
-      element.classList.add('pdf-export');
-      setTimeout(async () => {
-        try {
-          const pdfWorker = html2pdf().from(element).set(opt);
-          const pdfBlob = await pdfWorker.output('blob');
-          const pdfFile = new File([pdfBlob], `Invoice_${invNum}.pdf`, { type: 'application/pdf' });
+      try {
+        // Let the browser lay out the standalone invoice before taking the snapshot.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const pdfWorker = html2pdf().from(exportElement).set(opt);
+        const pdfBlob = await pdfWorker.output('blob');
+        const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-          if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-            await navigator.share({
-              files: [pdfFile],
-              title: `Invoice ${invNum}`,
-              text: `Please find attached invoice ${invNum} from AY Bakes.`,
-            });
-          } else {
-            await pdfWorker.save();
-          }
-        } catch (error) {
-          html2pdf().from(element).set(opt).save();
-        } finally {
-          element.classList.remove('pdf-export');
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({
+            files: [pdfFile],
+            title: `Invoice ${invNum}`,
+            text: `Please find attached invoice ${invNum} from AY Bakes.`
+          });
+        } else {
+          const url = URL.createObjectURL(pdfBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
         }
-      }, 300);
+      } catch (error) {
+        console.error('PDF export failed:', error);
+        try {
+          await html2pdf().set(opt).from(exportElement).save();
+        } catch (fallbackError) {
+          console.error('PDF fallback failed:', fallbackError);
+          alert('Unable to create the PDF. Please try again or use your browser’s Share/Print option.');
+        }
+      } finally {
+        exportElement.remove();
+      }
     }
 
     function finalizeAndIncrement() {
